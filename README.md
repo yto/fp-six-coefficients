@@ -64,7 +64,12 @@ fp-six-coefficients/
 ├── manifest.json    # PWA設定
 ├── sw.js            # Service Worker（オフライン対応）
 ├── icon.svg         # アプリアイコン
-└── README.md        # このファイル
+├── README.md        # このファイル
+├── CLAUDE.md        # Claude Code 向けプロジェクト説明
+├── session-log.md   # 開発セッションログ
+└── .claude/
+    ├── launch.json          # 開発サーバー設定
+    └── settings.local.json  # Claude Code ローカル設定
 ```
 
 外部依存は [Chart.js](https://www.chartjs.org/)（CDN）のみ。サーバー不要の静的サイトです。
