@@ -1,0 +1,17 @@
+{
+  "name": "FPの6つの係数",
+  "short_name": "FP6係数",
+  "description": "終価・現価・年金終価・減債基金・資本回収・年金現価の6係数をグラフと表で理解する",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f0f4f8",
+  "theme_color": "#4299e1",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

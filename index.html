@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FPの6つの係数</title>
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#4299e1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="FP6係数">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+      padding: 1.5rem 1rem 3rem;
+    }
+
+    .container { max-width: 860px; margin: 0 auto; }
+
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #2d3748;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      overflow-x: auto;
+      background: #fff;
+      border-radius: 12px 12px 0 0;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+
+    .tab {
+      flex: 1;
+      min-width: 90px;
+      padding: 0.65rem 0.4rem;
+      text-align: center;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .tab-name {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #718096;
+      white-space: nowrap;
+    }
+    .tab-formula {
+      display: block;
+      font-size: 0.62rem;
+      color: #a0aec0;
+      font-family: monospace;
+      margin-top: 2px;
+    }
+    .tab:hover .tab-name { color: #2b6cb0; }
+    .tab.active { border-bottom-color: var(--tab-color, #4299e1); background: #f7fafc; }
+    .tab.active .tab-name { color: var(--tab-color, #2b6cb0); }
+    .tab.active .tab-formula { color: var(--tab-color, #63b3ed); opacity: 0.8; }
+
+    /* ── Cards ── */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      padding: 1.4rem 1.5rem;
+      margin-bottom: 1.2rem;
+    }
+    .card-top { border-radius: 0 0 12px 12px; }
+
+    .section-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #2d3748;
+      margin-bottom: 0.9rem;
+    }
+
+    /* ── Sliders ── */
+    .fields {
+      display: grid;
+      grid-template-columns: max-content 5rem 1fr;
+      column-gap: 0.7rem;
+      row-gap: 0.9rem;
+      align-items: center;
+    }
+    .field { display: contents; }
+    .field label { font-size: 0.85rem; font-weight: 600; color: #4a5568; white-space: nowrap; }
+    .field .val { font-size: 1rem; font-weight: 700; color: #2b6cb0; text-align: right; }
+    input[type="range"] { width: 100%; accent-color: #4299e1; cursor: pointer; height: 6px; }
+
+    /* ── Desc box ── */
+    .desc-box {
+      margin-top: 1.1rem;
+      background: #ebf8ff;
+      border-radius: 10px;
+      padding: 1rem 1.2rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 1.2rem;
+    }
+    .desc-left { flex: 1; }
+    .desc-coef-name { font-size: 1rem; font-weight: 700; color: #1a365d; }
+    .desc-coef-desc { font-size: 0.82rem; color: #2b6cb0; margin-top: 0.3rem; }
+    .desc-formula {
+      font-size: 0.85rem;
+      font-family: monospace;
+      color: #4a5568;
+      margin-top: 0.5rem;
+      background: #fff;
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+    }
+    .desc-tags {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+    .tag {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      letter-spacing: 0.03em;
+    }
+    .tag-一括 { background: #bee3f8; color: #2c5282; }
+    .tag-積立 { background: #c6f6d5; color: #276749; }
+    .tag-取崩 { background: #fed7d7; color: #9b2c2c; }
+    .tag-将来 { background: #e9d8fd; color: #553c9a; }
+    .tag-現在 { background: #b2f5ea; color: #234e52; }
+    .desc-right { text-align: right; }
+    .coef-value { font-size: 2.2rem; font-weight: 700; color: #1a365d; line-height: 1; }
+    .coef-meaning { font-size: 0.75rem; color: #4a5568; margin-top: 0.4rem; }
+
+    /* ── Chart ── */
+    .chart-wrap { position: relative; width: 100%; height: 280px; }
+    canvas { display: block; width: 100% !important; }
+
+    /* ── Table ── */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th {
+      background: #ebf8ff;
+      color: #2b6cb0;
+      font-weight: 700;
+      padding: 0.5rem 0.8rem;
+      text-align: center;
+    }
+    td {
+      padding: 0.45rem 0.8rem;
+      text-align: right;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    td:first-child { text-align: center; font-weight: 600; color: #4a5568; }
+    tr:hover td { background: #f7fafc; }
+    tr.highlight td { background: #ebf8ff; font-weight: 700; color: #1a365d; }
+    td.active-col { background: #ebf8ff; font-weight: 700; }
+    th.active-col { background: #bee3f8; }
+
+    .chart-note {
+      margin-top: 0.6rem;
+      font-size: 0.75rem;
+      color: #a0aec0;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 600px) {
+      .desc-box { flex-direction: column; gap: 0.5rem; }
+      .desc-right { text-align: left; }
+      .tab { min-width: 72px; padding: 0.55rem 0.25rem; }
+      .tab-name { font-size: 0.68rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>FPの6つの係数</h1>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div class="card card-top">
+    <div class="fields">
+      <div class="field">
+        <label>年利率</label>
+        <span class="val" id="disp-rate">5.0%</span>
+        <input type="range" id="range-rate" min="0.1" max="20" step="0.1" value="5"
+               oninput="update()">
+      </div>
+      <div class="field">
+        <label>運用期間</label>
+        <span class="val" id="disp-years">20年</span>
+        <input type="range" id="range-years" min="1" max="50" step="1" value="20"
+               oninput="update()">
+      </div>
+    </div>
+
+    <div class="desc-box" id="desc-box">
+      <div class="desc-left">
+        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+          <div class="desc-coef-name" id="coef-name"></div>
+          <div class="desc-tags" id="coef-tags"></div>
+        </div>
+        <div class="desc-coef-desc" id="coef-desc"></div>
+        <div class="desc-formula" id="coef-formula"></div>
+      </div>
+      <div class="desc-right">
+        <div class="coef-value" id="coef-value"></div>
+        <div class="coef-meaning" id="coef-meaning"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chart-wrap">
+      <canvas id="chart"></canvas>
+    </div>
+    <p id="chart-note" class="chart-note" style="display:none"></p>
+  </div>
+
+  <div class="card">
+    <div class="section-title">年別係数一覧</div>
+    <div class="table-wrap">
+      <table>
+        <thead id="thead"></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+let chartInstance = null;
+let activeTab = 0;
+
+// ── 6 coefficients definition ──
+const COEFS = [
+  {
+    name: '終価係数',
+    formula: '(1+r)ⁿ',
+    desc: '現在の1円が将来いくらになるか',
+    tags: ['一括', '将来'],
+    color: [66, 153, 225],   // blue
+    chartType: 'stacked_fv',
+    calc: (r, n) => Math.pow(1 + r, n),
+    headers: ['年', '終価係数'],
+    rowFn: (r, n) => {
+      const v = Math.pow(1 + r, n);
+      return [n + '年', v.toFixed(4)];
+    },
+    meaningFn: (r, n) => {
+      const v = Math.pow(1 + r, n);
+      return `1円 → ${v.toFixed(4)}円（${n}年後）`;
+    },
+  },
+  {
+    name: '現価係数',
+    formula: '1/(1+r)ⁿ',
+    desc: '将来の1円は現在いくらか',
+    tags: ['一括', '現在'],
+    color: [185, 60, 130],   // crimson-purple
+    chartType: 'stacked_pv',
+    calc: (r, n) => 1 / Math.pow(1 + r, n),
+    headers: ['年', '現価係数'],
+    rowFn: (r, n) => {
+      const v = 1 / Math.pow(1 + r, n);
+      return [n + '年', v.toFixed(4)];
+    },
+    meaningFn: (r, n) => {
+      const v = 1 / Math.pow(1 + r, n);
+      return `${n}年後の1円 → 今${v.toFixed(4)}円`;
+    },
+  },
+  {
+    name: '年金終価係数',
+    formula: '[(1+r)ⁿ-1]/r',
+    desc: '毎年1円積み立てると将来いくらになるか',
+    tags: ['積立', '将来'],
+    color: [72, 187, 120],   // green
+    chartType: 'stacked_annuity',
+    calc: (r, n) => (Math.pow(1 + r, n) - 1) / r,
+    headers: ['年', '年金終価係数'],
+    rowFn: (r, n) => {
+      const v = (Math.pow(1 + r, n) - 1) / r;
+      return [n + '年', v.toFixed(4)];
+    },
+    meaningFn: (r, n) => {
+      const v = (Math.pow(1 + r, n) - 1) / r;
+      return `毎年1円×${n}年 → ${v.toFixed(4)}円`;
+    },
+  },
+  {
+    name: '減債基金係数',
+    formula: 'r/[(1+r)ⁿ-1]',
+    desc: '将来1円を貯めるために毎年いくら積み立てるか',
+    tags: ['積立', '現在'],
+    color: [237, 137, 54],   // orange
+    chartType: 'stacked_sf',
+    calc: (r, n) => r / (Math.pow(1 + r, n) - 1),
+    headers: ['年', '減債基金係数'],
+    rowFn: (r, n) => {
+      const v = r / (Math.pow(1 + r, n) - 1);
+      return [n + '年', v.toFixed(4)];
+    },
+    meaningFn: (r, n) => {
+      const v = r / (Math.pow(1 + r, n) - 1);
+      return `${n}年で1円→毎年${v.toFixed(4)}円積立`;
+    },
+  },
+  {
+    name: '資本回収係数',
+    formula: 'r/[1-(1+r)⁻ⁿ]',
+    desc: '今1円あると毎年いくら受け取れるか',
+    tags: ['取崩', '将来'],
+    color: [56, 178, 172],   // teal
+    chartType: 'stacked_cr',
+    calc: (r, n) => r / (1 - Math.pow(1 + r, -n)),
+    headers: ['年', '資本回収係数'],
+    rowFn: (r, n) => {
+      const v = r / (1 - Math.pow(1 + r, -n));
+      return [n + '年', v.toFixed(4)];
+    },
+    meaningFn: (r, n) => {
+      const v = r / (1 - Math.pow(1 + r, -n));
+      return `1円から${n}年間 毎年${v.toFixed(4)}円受取`;
+    },
+  },
+  {
+    name: '年金現価係数',
+    formula: '[1-(1+r)⁻ⁿ]/r',
+    desc: '毎年1円受け取るために今いくら必要か',
+    tags: ['取崩', '現在'],
+    color: [229, 62, 62],    // red
+    chartType: 'stacked_pva',
+    calc: (r, n) => (1 - Math.pow(1 + r, -n)) / r,
+    headers: ['年', '年金現価係数'],
+    rowFn: (r, n) => {
+      const v = (1 - Math.pow(1 + r, -n)) / r;
+      return [n + '年', v.toFixed(4)];
+    },
+    meaningFn: (r, n) => {
+      const v = (1 - Math.pow(1 + r, -n)) / r;
+      return `毎年1円×${n}年受取 → 今${v.toFixed(4)}円必要`;
+    },
+  },
+];
+
+// ── Build tabs ──
+const tabsEl = document.getElementById('tabs');
+COEFS.forEach((c, i) => {
+  const [cr, cg, cb] = c.color;
+  const colorStr = `rgb(${cr},${cg},${cb})`;
+  const el = document.createElement('div');
+  el.className = 'tab' + (i === 0 ? ' active' : '');
+  el.style.setProperty('--tab-color', colorStr);
+  el.innerHTML = `<span class="tab-name">${c.name}</span><span class="tab-formula">${c.formula}</span>`;
+  el.onclick = () => setTab(i);
+  tabsEl.appendChild(el);
+});
+
+function setTab(i) {
+  activeTab = i;
+  document.querySelectorAll('.tab').forEach((el, j) => el.classList.toggle('active', i === j));
+  update();
+}
+
+function getParams() {
+  const r = parseFloat(document.getElementById('range-rate').value) / 100;
+  const n = parseInt(document.getElementById('range-years').value);
+  return { r, n };
+}
+
+function update() {
+  const { r, n } = getParams();
+  document.getElementById('disp-rate').textContent = (r * 100).toFixed(1) + '%';
+  document.getElementById('disp-years').textContent = n + '年';
+
+  const c = COEFS[activeTab];
+  const v = c.calc(r, n);
+  const [cr, cg, cb] = c.color;
+
+  document.getElementById('coef-name').textContent = c.name;
+  document.getElementById('coef-desc').textContent = c.desc;
+  document.getElementById('coef-formula').textContent = c.formula;
+  document.getElementById('coef-value').textContent = v.toFixed(4);
+  document.getElementById('coef-meaning').textContent = c.meaningFn(r, n);
+  document.getElementById('desc-box').style.background = `rgba(${cr},${cg},${cb},0.1)`;
+  document.getElementById('coef-value').style.color = `rgb(${cr},${cg},${cb})`;
+  document.getElementById('coef-tags').innerHTML =
+    c.tags.map(t => `<span class="tag tag-${t}">${t}</span>`).join('');
+
+  renderChart(c, r, n);
+  renderTable(c, r, n);
+
+  const note = document.getElementById('chart-note');
+  const showNote = c.chartType === 'stacked_pva' || c.chartType === 'stacked_cr';
+  note.style.display = showNote ? 'block' : 'none';
+  if (showNote) {
+    note.textContent = '※ このグラフは概念理解のため、先に元金を減らす方式で表示しています。実務（元利均等返済など）では利息が先に支払われるため、元金の減り方は異なります。';
+  }
+}
+
+function rgba(color, alpha) {
+  const [r, g, b] = color;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function renderChart(c, r, n) {
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+  const labels = [];
+  for (let y = 1; y <= n; y++) labels.push(y + '年');
+
+  let datasets, stacked = false;
+
+  if (c.chartType === 'stacked_fv') {
+    // 終価係数: base=1(blue), gain=green
+    const gainData = [];
+    for (let y = 1; y <= n; y++) gainData.push(Math.pow(1 + r, y) - 1);
+    stacked = true;
+    datasets = [
+      {
+        label: '元本',
+        data: new Array(n).fill(1),
+        backgroundColor: rgba(c.color, 0.75),
+        stack: 's',
+      },
+      {
+        label: '運用益',
+        data: gainData,
+        backgroundColor: 'rgba(72,187,120,0.85)',
+        stack: 's',
+      },
+    ];
+
+  } else if (c.chartType === 'stacked_pv') {
+    // 現価係数: 元本=pv(固定), 運用益=pv*(1+r)^t - pv → N年目の合計がちょうど1
+    const pv = 1 / Math.pow(1 + r, n);
+    const interestData = [];
+    for (let y = 1; y <= n; y++) {
+      interestData.push(pv * Math.pow(1 + r, y) - pv);
+    }
+    stacked = true;
+    datasets = [
+      {
+        label: '元本',
+        data: new Array(n).fill(pv),
+        backgroundColor: 'rgba(66,153,225,0.75)',
+        stack: 's',
+      },
+      {
+        label: '運用益',
+        data: interestData,
+        backgroundColor: 'rgba(72,187,120,0.85)',
+        stack: 's',
+      },
+    ];
+
+  } else if (c.chartType === 'stacked_cr') {
+    // 資本回収係数: 元本1円、毎年pmt受取。t年目残高(払出前) = (1+r)^(t-1) - pmt*[(1+r)^(t-1)-1]/r
+    const pmt = r / (1 - Math.pow(1 + r, -n));
+    const principalData = [], interestData = [];
+    for (let y = 1; y <= n; y++) {
+      const balance = Math.pow(1 + r, y - 1) - pmt * (Math.pow(1 + r, y - 1) - 1) / r;
+      const principal = Math.max(0, 1 - pmt * (y - 1));
+      const interest = Math.max(0, balance - principal);
+      principalData.push(principal);
+      interestData.push(interest);
+    }
+    stacked = true;
+    datasets = [
+      {
+        label: '元金残',
+        data: principalData,
+        backgroundColor: 'rgba(66,153,225,0.75)',
+        stack: 's',
+      },
+      {
+        label: '運用益',
+        data: interestData,
+        backgroundColor: 'rgba(72,187,120,0.85)',
+        stack: 's',
+      },
+    ];
+
+  } else if (c.chartType === 'stacked_pva') {
+    // 年金現価係数: PV = 係数値。年t開始時残高（払い出し前）を積み上げ棒で表示
+    // 元金部分 = PV - (t-1)、運用益部分 = 残高 - 元金部分
+    // t年目残高(払出前) = PV*(1+r)^(t-1) - [(1+r)^(t-1)-1]/r
+    const pv = (1 - Math.pow(1 + r, -n)) / r;
+    const principalData = [], interestData = [];
+    for (let y = 1; y <= n; y++) {
+      const balance = pv * Math.pow(1 + r, y - 1) - (Math.pow(1 + r, y - 1) - 1) / r;
+      const principal = Math.max(0, pv - (y - 1));
+      const interest = Math.max(0, balance - principal);
+      principalData.push(principal);
+      interestData.push(interest);
+    }
+    stacked = true;
+    datasets = [
+      {
+        label: '元金残',
+        data: principalData,
+        backgroundColor: 'rgba(66,153,225,0.75)',
+        stack: 's',
+      },
+      {
+        label: '運用益',
+        data: interestData,
+        backgroundColor: 'rgba(72,187,120,0.85)',
+        stack: 's',
+      },
+    ];
+
+  } else if (c.chartType === 'stacked_sf') {
+    // 減債基金係数: 毎年の積立額=pmt、t年目の総額=pmt×年金終価係数 → N年目=1
+    const pmt = r / (Math.pow(1 + r, n) - 1);
+    const baseData = [], interestData = [];
+    for (let y = 1; y <= n; y++) {
+      const total = pmt * (Math.pow(1 + r, y) - 1) / r;
+      baseData.push(pmt * y);
+      interestData.push(total - pmt * y);
+    }
+    stacked = true;
+    datasets = [
+      {
+        label: '積立累計',
+        data: baseData,
+        backgroundColor: 'rgba(66,153,225,0.8)',
+        stack: 's',
+      },
+      {
+        label: '運用益',
+        data: interestData,
+        backgroundColor: 'rgba(72,187,120,0.85)',
+        stack: 's',
+      },
+    ];
+
+  } else if (c.chartType === 'stacked_annuity') {
+    // 年金終価係数: blue=積立, green=運用益
+    const baseData = [], interestData = [];
+    for (let y = 1; y <= n; y++) {
+      const total = (Math.pow(1 + r, y) - 1) / r;
+      baseData.push(y);
+      interestData.push(total - y);
+    }
+    stacked = true;
+    datasets = [
+      {
+        label: '積立累計',
+        data: baseData,
+        backgroundColor: 'rgba(66,153,225,0.8)',
+        stack: 's',
+      },
+      {
+        label: '運用益',
+        data: interestData,
+        backgroundColor: 'rgba(72,187,120,0.85)',
+        stack: 's',
+      },
+    ];
+
+  } else {
+    // simple bar
+    const data = [];
+    for (let y = 1; y <= n; y++) data.push(c.calc(r, y));
+    datasets = [
+      {
+        label: c.name,
+        data,
+        backgroundColor: labels.map((_, i) =>
+          i === n - 1 ? rgba(c.color, 1) : rgba(c.color, 0.65)
+        ),
+      },
+    ];
+  }
+
+  const ctx = document.getElementById('chart').getContext('2d');
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: {
+          mode: 'index',
+          itemSort: (a, b) => b.datasetIndex - a.datasetIndex,
+          callbacks: {
+            label: item => ` ${item.dataset.label}: ${Number(item.raw).toFixed(4)}`,
+            footer: items => ` 合計: ${items.reduce((s, i) => s + i.raw, 0).toFixed(4)}`,
+          }
+        }
+      },
+      scales: {
+        x: { stacked, grid: { display: false } },
+        y: {
+          stacked,
+          ticks: { callback: v => Number(v).toFixed(2) },
+          beginAtZero: true,
+        },
+      },
+    },
+  });
+}
+
+function renderTable(c, r, n) {
+  const activeIdx = activeTab; // 0-5
+
+  // Header: 年 + 6係数名
+  const headCells = ['<th>年</th>'];
+  const breakAt = { '年金終価係数': '年金<br>終価係数', '減債基金係数': '減債<br>基金係数', '年金現価係数': '年金<br>現価係数', '資本回収係数': '資本<br>回収係数' };
+  COEFS.forEach((coef, i) => {
+    const label = breakAt[coef.name] || coef.name;
+    headCells.push(`<th class="${i === activeIdx ? 'active-col' : ''}">${label}</th>`);
+  });
+  document.getElementById('thead').innerHTML = '<tr>' + headCells.join('') + '</tr>';
+
+  // Rows
+  const rows = [];
+  for (let y = 1; y <= n; y++) {
+    const cells = [`<td>${y}年</td>`];
+    COEFS.forEach((coef, i) => {
+      const v = coef.calc(r, y);
+      cells.push(`<td class="${i === activeIdx ? 'active-col' : ''}">${v.toFixed(4)}</td>`);
+    });
+    rows.push(`<tr>${cells.join('')}</tr>`);
+  }
+  document.getElementById('tbody').innerHTML = rows.join('');
+}
+
+// ── Load Chart.js then init ──
+const script = document.createElement('script');
+script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js';
+script.onload = () => update();
+document.head.appendChild(script);
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
+</script>
+</body>
+</html>
