@@ -88,7 +88,7 @@ python3 -m http.server 3000
 
 - フレームワーク・ビルドツールなし（HTML + CSS + JavaScript のみ）
 - グラフ描画: [Chart.js](https://www.chartjs.org/)
-- 開発の過程は [`session-log.md`](./session-log.md) に記録されています
+- 開発の過程は [`session-log.md`](./session-log.md) に記録されています（途中まで）
 
 既存の[複利計算機](https://github.com/yto/fukuri-keisanki)をベースに、以下の作業をすべて Claude Code との会話形式で進めました：
 
