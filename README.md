@@ -2,7 +2,7 @@
 
 FP（ファイナンシャルプランニング）で使われる6つの係数を、グラフと表でインタラクティブに学べるツールです。
 
-🔗 **[ツールを開く](https://yto.github.io/fp-six-coefficients/)**
+**公開URL:** https://yto.github.io/fp-six-coefficients/
 
 ---
 
@@ -86,7 +86,7 @@ python3 -m http.server 3000
 
 このツールは **[Claude Code](https://claude.ai/code)** (Anthropic) との対話を通じて開発しました。
 
-既存の複利計算機をベースに、以下の作業をすべて Claude Code との会話形式で進めました：
+既存の[複利計算機](https://github.com/yto/fukuri-keisanki)をベースに、以下の作業をすべて Claude Code との会話形式で進めました：
 
 - UIの全面再設計（6タブ構成・スライダー・情報ボックス）
 - 各係数に適したグラフタイプの設計と実装
