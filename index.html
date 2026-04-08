@@ -212,6 +212,7 @@
           <div class="desc-tags" id="coef-tags"></div>
         </div>
         <div class="desc-coef-desc" id="coef-desc"></div>
+        <div class="desc-coef-desc" id="coef-desc2" style="display:none"></div>
         <div class="desc-formula" id="coef-formula"></div>
       </div>
       <div class="desc-right">
@@ -321,6 +322,7 @@ const COEFS = [
     name: '資本回収係数',
     formula: 'r/[1-(1+r)⁻ⁿ]',
     desc: '今1円あると毎年いくら受け取れるか',
+    desc2: '（今1円借りたら毎年いくら返済する必要があるか）',
     tags: ['取崩', '将来'],
     color: [56, 178, 172],   // teal
     chartType: 'stacked_cr',
@@ -339,6 +341,7 @@ const COEFS = [
     name: '年金現価係数',
     formula: '[1-(1+r)⁻ⁿ]/r',
     desc: '毎年1円受け取るために今いくら必要か',
+    desc2: '（毎年1円返済できるとすると今いくら借りられるか）',
     tags: ['取崩', '現在'],
     color: [229, 62, 62],    // red
     chartType: 'stacked_pva',
@@ -391,6 +394,9 @@ function update() {
 
   document.getElementById('coef-name').textContent = c.name;
   document.getElementById('coef-desc').textContent = c.desc;
+  const desc2El = document.getElementById('coef-desc2');
+  if (c.desc2) { desc2El.textContent = c.desc2; desc2El.style.display = 'block'; }
+  else { desc2El.style.display = 'none'; }
   document.getElementById('coef-formula').textContent = c.formula;
   document.getElementById('coef-value').textContent = v.toFixed(4);
   document.getElementById('coef-meaning').textContent = c.meaningFn(r, n);
