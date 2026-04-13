@@ -167,6 +167,36 @@
     td.active-col { background: #ebf8ff; font-weight: 700; }
     th.active-col { background: #bee3f8; }
 
+    .info-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 0.68rem;
+      height: 0.68rem;
+      border-radius: 50%;
+      background: #bee3f8;
+      color: #2b6cb0;
+      font-size: 0.48rem;
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
+      margin-left: 0.3rem;
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+    .info-tip {
+      display: none;
+      grid-column: 1 / -1;
+      background: #ebf8ff;
+      border: 1px solid #bee3f8;
+      border-radius: 8px;
+      padding: 0.55rem 0.9rem;
+      font-size: 0.8rem;
+      color: #2b6cb0;
+      line-height: 1.5;
+    }
+    .info-tip.visible { display: block; }
+
     .chart-note {
       margin-top: 0.6rem;
       font-size: 0.75rem;
@@ -202,6 +232,13 @@
         <input type="range" id="range-years" min="1" max="50" step="1" value="20"
                oninput="update()">
       </div>
+      <div class="field">
+        <label>試算金額<span class="info-btn" id="info-btn" onclick="toggleInfo(event)">ℹ</span></label>
+        <span class="val" id="disp-amount">1円</span>
+        <input type="range" id="range-amount" min="0" max="99" step="1" value="0"
+               oninput="update()">
+      </div>
+      <div id="info-tip" class="info-tip">係数は「1円あたり」の倍率です。試算金額に係数を掛けると実際の金額が求まります。</div>
     </div>
 
     <div class="desc-box" id="desc-box">
@@ -247,6 +284,14 @@
 let chartInstance = null;
 let activeTab = 0;
 
+function toggleInfo(e) {
+  e.stopPropagation();
+  document.getElementById('info-tip').classList.toggle('visible');
+}
+document.addEventListener('click', () => {
+  document.getElementById('info-tip').classList.remove('visible');
+});
+
 // ── 6 coefficients definition ──
 const COEFS = [
   {
@@ -262,9 +307,9 @@ const COEFS = [
       const v = Math.pow(1 + r, n);
       return [n + '年', v.toFixed(4)];
     },
-    meaningFn: (r, n) => {
+    meaningFn: (r, n, a) => {
       const v = Math.pow(1 + r, n);
-      return `1円 → ${v.toFixed(4)}円（${n}年後）`;
+      return `${formatYen(a)} → ${formatYen(a * v)}（${n}年後）`;
     },
   },
   {
@@ -280,9 +325,9 @@ const COEFS = [
       const v = 1 / Math.pow(1 + r, n);
       return [n + '年', v.toFixed(4)];
     },
-    meaningFn: (r, n) => {
+    meaningFn: (r, n, a) => {
       const v = 1 / Math.pow(1 + r, n);
-      return `${n}年後の1円 → 今${v.toFixed(4)}円`;
+      return `${n}年後の${formatYen(a)} → 今${formatYen(a * v)}`;
     },
   },
   {
@@ -298,9 +343,9 @@ const COEFS = [
       const v = (Math.pow(1 + r, n) - 1) / r;
       return [n + '年', v.toFixed(4)];
     },
-    meaningFn: (r, n) => {
+    meaningFn: (r, n, a) => {
       const v = (Math.pow(1 + r, n) - 1) / r;
-      return `毎年1円×${n}年 → ${v.toFixed(4)}円`;
+      return `毎年${formatYen(a)}×${n}年 → ${formatYen(a * v)}`;
     },
   },
   {
@@ -316,9 +361,9 @@ const COEFS = [
       const v = r / (Math.pow(1 + r, n) - 1);
       return [n + '年', v.toFixed(4)];
     },
-    meaningFn: (r, n) => {
+    meaningFn: (r, n, a) => {
       const v = r / (Math.pow(1 + r, n) - 1);
-      return `${n}年で1円→毎年${v.toFixed(4)}円積立`;
+      return `${n}年で${formatYen(a)}→毎年${formatYen(a * v)}積立`;
     },
   },
   {
@@ -335,9 +380,9 @@ const COEFS = [
       const v = r / (1 - Math.pow(1 + r, -n));
       return [n + '年', v.toFixed(4)];
     },
-    meaningFn: (r, n) => {
+    meaningFn: (r, n, a) => {
       const v = r / (1 - Math.pow(1 + r, -n));
-      return `1円から${n}年間 毎年${v.toFixed(4)}円受取`;
+      return `${formatYen(a)}で${n}年間 → 毎年${formatYen(a * v)}受取`;
     },
   },
   {
@@ -354,9 +399,9 @@ const COEFS = [
       const v = (1 - Math.pow(1 + r, -n)) / r;
       return [n + '年', v.toFixed(4)];
     },
-    meaningFn: (r, n) => {
+    meaningFn: (r, n, a) => {
       const v = (1 - Math.pow(1 + r, -n)) / r;
-      return `毎年1円×${n}年受取 → 今${v.toFixed(4)}円必要`;
+      return `毎年${formatYen(a)}×${n}年受取 → 今${formatYen(a * v)}必要`;
     },
   },
 ];
@@ -380,6 +425,31 @@ function setTab(i) {
   update();
 }
 
+const AMOUNT_STEPS = (() => {
+  const s = [1];
+  for (let v = 1000; v <= 10000; v += 500) s.push(v);
+  for (let v = 15000; v <= 100000; v += 5000) s.push(v);
+  for (let v = 150000; v <= 1000000; v += 50000) s.push(v);
+  for (let v = 1500000; v <= 10000000; v += 500000) s.push(v);
+  for (let v = 15000000; v <= 100000000; v += 5000000) s.push(v);
+  for (let v = 150000000; v <= 500000000; v += 50000000) s.push(v);
+  return s;
+})();
+
+function getAmount() {
+  const i = parseInt(document.getElementById('range-amount').value);
+  return AMOUNT_STEPS[i];
+}
+
+function formatYen(v) {
+  const abs = Math.abs(v);
+  if (abs === 0) return '0円';
+  if (abs >= 1e8) return parseFloat((v / 1e8).toPrecision(4)) + '億円';
+  if (abs >= 1e4) return parseFloat((v / 1e4).toPrecision(4)) + '万円';
+  if (abs >= 1)   return parseFloat(v.toPrecision(4)) + '円';
+  return v.toFixed(4) + '円';
+}
+
 function getParams() {
   const r = parseFloat(document.getElementById('range-rate').value) / 100;
   const n = parseInt(document.getElementById('range-years').value);
@@ -388,8 +458,10 @@ function getParams() {
 
 function update() {
   const { r, n } = getParams();
+  const amount = getAmount();
   document.getElementById('disp-rate').textContent = (r * 100).toFixed(1) + '%';
   document.getElementById('disp-years').textContent = n + '年';
+  document.getElementById('disp-amount').textContent = formatYen(amount);
 
   const c = COEFS[activeTab];
   const v = c.calc(r, n);
@@ -402,13 +474,13 @@ function update() {
   else { desc2El.style.display = 'none'; }
   document.getElementById('coef-formula').textContent = c.formula;
   document.getElementById('coef-value').textContent = v.toFixed(4);
-  document.getElementById('coef-meaning').textContent = c.meaningFn(r, n);
+  document.getElementById('coef-meaning').textContent = c.meaningFn(r, n, amount);
   document.getElementById('desc-box').style.background = `rgba(${cr},${cg},${cb},0.1)`;
   document.getElementById('coef-value').style.color = `rgb(${cr},${cg},${cb})`;
   document.getElementById('coef-tags').innerHTML =
     c.tags.map(t => `<span class="tag tag-${t}">${t}</span>`).join('');
 
-  renderChart(c, r, n);
+  renderChart(c, r, n, amount);
   renderTable(c, r, n);
 
   const note = document.getElementById('chart-note');
@@ -424,7 +496,7 @@ function rgba(color, alpha) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-function renderChart(c, r, n) {
+function renderChart(c, r, n, amount) {
   if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
 
   const labels = [];
@@ -433,107 +505,58 @@ function renderChart(c, r, n) {
   let datasets, stacked = false;
 
   if (c.chartType === 'stacked_fv') {
-    // 終価係数: base=1(blue), gain=green
     const gainData = [];
-    for (let y = 1; y <= n; y++) gainData.push(Math.pow(1 + r, y) - 1);
+    for (let y = 1; y <= n; y++) gainData.push((Math.pow(1 + r, y) - 1) * amount);
     stacked = true;
     datasets = [
-      {
-        label: '元本',
-        data: new Array(n).fill(1),
-        backgroundColor: rgba(c.color, 0.75),
-        stack: 's',
-      },
-      {
-        label: '運用益',
-        data: gainData,
-        backgroundColor: 'rgba(72,187,120,0.85)',
-        stack: 's',
-      },
+      { label: '元本', data: new Array(n).fill(amount), backgroundColor: rgba(c.color, 0.75), stack: 's' },
+      { label: '運用益', data: gainData, backgroundColor: 'rgba(72,187,120,0.85)', stack: 's' },
     ];
 
   } else if (c.chartType === 'stacked_pv') {
-    // 現価係数: 元本=pv(固定), 運用益=pv*(1+r)^t - pv → N年目の合計がちょうど1
-    const pv = 1 / Math.pow(1 + r, n);
+    const pvRatio = 1 / Math.pow(1 + r, n);
+    const pv = pvRatio * amount;
     const interestData = [];
-    for (let y = 1; y <= n; y++) {
-      interestData.push(pv * Math.pow(1 + r, y) - pv);
-    }
+    for (let y = 1; y <= n; y++) interestData.push(pv * Math.pow(1 + r, y) - pv);
     stacked = true;
     datasets = [
-      {
-        label: '元本',
-        data: new Array(n).fill(pv),
-        backgroundColor: 'rgba(66,153,225,0.75)',
-        stack: 's',
-      },
-      {
-        label: '運用益',
-        data: interestData,
-        backgroundColor: 'rgba(72,187,120,0.85)',
-        stack: 's',
-      },
+      { label: '元本', data: new Array(n).fill(pv), backgroundColor: 'rgba(66,153,225,0.75)', stack: 's' },
+      { label: '運用益', data: interestData, backgroundColor: 'rgba(72,187,120,0.85)', stack: 's' },
     ];
 
   } else if (c.chartType === 'stacked_cr') {
-    // 資本回収係数: 元本1円、毎年pmt受取。t年目残高(払出前) = (1+r)^(t-1) - pmt*[(1+r)^(t-1)-1]/r
-    const pmt = r / (1 - Math.pow(1 + r, -n));
+    const pmtRatio = r / (1 - Math.pow(1 + r, -n));
     const principalData = [], interestData = [];
     for (let y = 1; y <= n; y++) {
-      const balance = Math.pow(1 + r, y - 1) - pmt * (Math.pow(1 + r, y - 1) - 1) / r;
-      const principal = Math.max(0, 1 - pmt * (y - 1));
-      const interest = Math.max(0, balance - principal);
+      const balance = (Math.pow(1 + r, y - 1) - pmtRatio * (Math.pow(1 + r, y - 1) - 1) / r) * amount;
+      const principal = Math.max(0, (1 - pmtRatio * (y - 1)) * amount);
+      interestData.push(Math.max(0, balance - principal));
       principalData.push(principal);
-      interestData.push(interest);
     }
     stacked = true;
     datasets = [
-      {
-        label: '元金残',
-        data: principalData,
-        backgroundColor: 'rgba(66,153,225,0.75)',
-        stack: 's',
-      },
-      {
-        label: '運用益',
-        data: interestData,
-        backgroundColor: 'rgba(72,187,120,0.85)',
-        stack: 's',
-      },
+      { label: '元金残', data: principalData, backgroundColor: 'rgba(66,153,225,0.75)', stack: 's' },
+      { label: '運用益', data: interestData, backgroundColor: 'rgba(72,187,120,0.85)', stack: 's' },
     ];
 
   } else if (c.chartType === 'stacked_pva') {
-    // 年金現価係数: PV = 係数値。年t開始時残高（払い出し前）を積み上げ棒で表示
-    // 元金部分 = PV - (t-1)、運用益部分 = 残高 - 元金部分
-    // t年目残高(払出前) = PV*(1+r)^(t-1) - [(1+r)^(t-1)-1]/r
-    const pv = (1 - Math.pow(1 + r, -n)) / r;
+    const pvRatio = (1 - Math.pow(1 + r, -n)) / r;
     const principalData = [], interestData = [];
     for (let y = 1; y <= n; y++) {
-      const balance = pv * Math.pow(1 + r, y - 1) - (Math.pow(1 + r, y - 1) - 1) / r;
-      const principal = Math.max(0, pv - (y - 1));
-      const interest = Math.max(0, balance - principal);
+      const balance = (pvRatio * Math.pow(1 + r, y - 1) - (Math.pow(1 + r, y - 1) - 1) / r) * amount;
+      const principal = Math.max(0, (pvRatio - (y - 1)) * amount);
+      interestData.push(Math.max(0, balance - principal));
       principalData.push(principal);
-      interestData.push(interest);
     }
     stacked = true;
     datasets = [
-      {
-        label: '元金残',
-        data: principalData,
-        backgroundColor: 'rgba(66,153,225,0.75)',
-        stack: 's',
-      },
-      {
-        label: '運用益',
-        data: interestData,
-        backgroundColor: 'rgba(72,187,120,0.85)',
-        stack: 's',
-      },
+      { label: '元金残', data: principalData, backgroundColor: 'rgba(66,153,225,0.75)', stack: 's' },
+      { label: '運用益', data: interestData, backgroundColor: 'rgba(72,187,120,0.85)', stack: 's' },
     ];
 
   } else if (c.chartType === 'stacked_sf') {
-    // 減債基金係数: 毎年の積立額=pmt、t年目の総額=pmt×年金終価係数 → N年目=1
-    const pmt = r / (Math.pow(1 + r, n) - 1);
+    const pmtRatio = r / (Math.pow(1 + r, n) - 1);
+    const pmt = pmtRatio * amount;
     const baseData = [], interestData = [];
     for (let y = 1; y <= n; y++) {
       const total = pmt * (Math.pow(1 + r, y) - 1) / r;
@@ -542,55 +565,31 @@ function renderChart(c, r, n) {
     }
     stacked = true;
     datasets = [
-      {
-        label: '積立累計',
-        data: baseData,
-        backgroundColor: 'rgba(66,153,225,0.8)',
-        stack: 's',
-      },
-      {
-        label: '運用益',
-        data: interestData,
-        backgroundColor: 'rgba(72,187,120,0.85)',
-        stack: 's',
-      },
+      { label: '積立累計', data: baseData, backgroundColor: 'rgba(66,153,225,0.8)', stack: 's' },
+      { label: '運用益', data: interestData, backgroundColor: 'rgba(72,187,120,0.85)', stack: 's' },
     ];
 
   } else if (c.chartType === 'stacked_annuity') {
-    // 年金終価係数: blue=積立, green=運用益
     const baseData = [], interestData = [];
     for (let y = 1; y <= n; y++) {
       const total = (Math.pow(1 + r, y) - 1) / r;
-      baseData.push(y);
-      interestData.push(total - y);
+      baseData.push(y * amount);
+      interestData.push((total - y) * amount);
     }
     stacked = true;
     datasets = [
-      {
-        label: '積立累計',
-        data: baseData,
-        backgroundColor: 'rgba(66,153,225,0.8)',
-        stack: 's',
-      },
-      {
-        label: '運用益',
-        data: interestData,
-        backgroundColor: 'rgba(72,187,120,0.85)',
-        stack: 's',
-      },
+      { label: '積立累計', data: baseData, backgroundColor: 'rgba(66,153,225,0.8)', stack: 's' },
+      { label: '運用益', data: interestData, backgroundColor: 'rgba(72,187,120,0.85)', stack: 's' },
     ];
 
   } else {
-    // simple bar
     const data = [];
-    for (let y = 1; y <= n; y++) data.push(c.calc(r, y));
+    for (let y = 1; y <= n; y++) data.push(c.calc(r, y) * amount);
     datasets = [
       {
         label: c.name,
         data,
-        backgroundColor: labels.map((_, i) =>
-          i === n - 1 ? rgba(c.color, 1) : rgba(c.color, 0.65)
-        ),
+        backgroundColor: labels.map((_, i) => i === n - 1 ? rgba(c.color, 1) : rgba(c.color, 0.65)),
       },
     ];
   }
@@ -609,8 +608,8 @@ function renderChart(c, r, n) {
           mode: 'index',
           itemSort: (a, b) => b.datasetIndex - a.datasetIndex,
           callbacks: {
-            label: item => ` ${item.dataset.label}: ${Number(item.raw).toFixed(4)}`,
-            footer: items => ` 合計: ${items.reduce((s, i) => s + i.raw, 0).toFixed(4)}`,
+            label: item => ` ${item.dataset.label}: ${formatYen(item.raw)}`,
+            footer: items => ` 合計: ${formatYen(items.reduce((s, i) => s + i.raw, 0))}`,
           }
         }
       },
@@ -618,7 +617,13 @@ function renderChart(c, r, n) {
         x: { stacked, grid: { display: false } },
         y: {
           stacked,
-          ticks: { callback: v => Number(v).toFixed(2) },
+          ticks: { callback: (v, index, ticks) => {
+            const abs = Math.abs(v);
+            if (abs >= 1e8) { const s = (v/1e8).toFixed(2); return (s.endsWith('.00') ? parseFloat(s) : s) + '億'; }
+            if (abs >= 1e4) { const s = (v/1e4).toFixed(2); return (s.endsWith('.00') ? parseFloat(s) : s) + '万'; }
+            const yenWhole = ticks.filter(t => Math.abs(t.value) < 1e4).every(t => t.value % 1 === 0);
+            return yenWhole ? String(Math.round(v)) : v.toFixed(2);
+          }},
           beginAtZero: true,
         },
       },
