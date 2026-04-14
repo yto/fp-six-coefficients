@@ -426,7 +426,7 @@ function setTab(i) {
 }
 
 const AMOUNT_STEPS = (() => {
-  const s = [0];
+  const s = [1];
   for (let v = 1000; v <= 10000; v += 1000) s.push(v);         // 1000〜1万, 1000刻み
   for (let v = 15000; v <= 100000; v += 5000) s.push(v);       // 1万〜10万, 5000刻み
   for (let v = 110000; v <= 1000000; v += 10000) s.push(v);    // 10万〜100万, 1万刻み
