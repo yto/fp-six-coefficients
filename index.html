@@ -235,7 +235,7 @@
       <div class="field">
         <label>試算金額<span class="info-btn" id="info-btn" onclick="toggleInfo(event)">ℹ&#xFE0E;</span></label>
         <span class="val" id="disp-amount">1円</span>
-        <input type="range" id="range-amount" min="0" max="99" step="1" value="0"
+        <input type="range" id="range-amount" min="0" max="338" step="1" value="0"
                oninput="update()">
       </div>
       <div id="info-tip" class="info-tip">係数は「1円あたり」の倍率です。試算金額に係数を掛けると実際の金額が求まります。</div>
@@ -426,13 +426,13 @@ function setTab(i) {
 }
 
 const AMOUNT_STEPS = (() => {
-  const s = [1];
-  for (let v = 1000; v <= 10000; v += 500) s.push(v);
-  for (let v = 15000; v <= 100000; v += 5000) s.push(v);
-  for (let v = 150000; v <= 1000000; v += 50000) s.push(v);
-  for (let v = 1500000; v <= 10000000; v += 500000) s.push(v);
-  for (let v = 15000000; v <= 100000000; v += 5000000) s.push(v);
-  for (let v = 150000000; v <= 500000000; v += 50000000) s.push(v);
+  const s = [0];
+  for (let v = 1000; v <= 10000; v += 1000) s.push(v);         // 1000〜1万, 1000刻み
+  for (let v = 15000; v <= 100000; v += 5000) s.push(v);       // 1万〜10万, 5000刻み
+  for (let v = 110000; v <= 1000000; v += 10000) s.push(v);    // 10万〜100万, 1万刻み
+  for (let v = 1100000; v <= 10000000; v += 100000) s.push(v); // 100万〜1000万, 10万刻み
+  for (let v = 11000000; v <= 100000000; v += 1000000) s.push(v); // 1000万〜1億, 100万刻み
+  for (let v = 110000000; v <= 500000000; v += 10000000) s.push(v); // 1億〜5億, 1000万刻み
   return s;
 })();
 
